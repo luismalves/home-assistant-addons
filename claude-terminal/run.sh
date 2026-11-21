@@ -620,6 +620,26 @@ setup_ha_mcp() {
     fi
 }
 
+# Rex server over its built-in Tailscale. Started after env/MCP setup so Rex
+# sessions inherit HOME, PATH, SUPERVISOR_TOKEN etc. State lands in
+# $XDG_STATE_HOME/rex (under /data), so the tailnet node survives restarts.
+start_rex() {
+    [ "$(bashio::config 'enable_rex' 'false')" = "true" ] || return 0
+    command -v rex >/dev/null || { bashio::log.warning "enable_rex set but rex is not installed"; return 0; }
+
+    local key
+    key=$(bashio::config 'rex_tailscale_auth_key' '')
+    bashio::log.info "Starting Rex server on Tailscale (https://rex.<tailnet>.ts.net)"
+    # ponytail: auth key only matters on first join; without one, look for the
+    # Tailscale login URL with `rex server logs` in the terminal.
+    if [ -n "$key" ]; then
+        printf '%s' "$key" | rex server start --tailscale --tailscale-auth-key-file - \
+            || bashio::log.warning "Rex server failed to start"
+    else
+        rex server start --tailscale || bashio::log.warning "Rex server failed to start"
+    fi &
+}
+
 # Main execution
 main() {
     bashio::log.info "Starting Claude Terminal add-on..."
@@ -634,6 +654,7 @@ main() {
     generate_ha_context
     start_login_url_watcher
     setup_ha_mcp
+    start_rex
     start_ingress_proxy
     start_web_terminal
 }

@@ -63,6 +63,11 @@ RUN case "$(apk --print-arch)" in \
     && install -m 0755 /tmp/package/claude /usr/local/bin/claude \
     && rm -rf /tmp/package
 
+# Rex server (superlogical.com/rex): persistent sessions reachable from the
+# Rex app/CLI. The install script adds Rex's apk repo and installs the musl build.
+RUN curl -fsSL https://pkgs.superlogical.com/rex/install.sh | sh \
+    && rex version
+
 WORKDIR /config
 
 COPY run.sh /run.sh

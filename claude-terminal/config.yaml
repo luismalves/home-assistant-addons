@@ -1,13 +1,12 @@
 ---
 name: "Claude Terminal"
 description: "Web terminal with Anthropic's Claude Code CLI and persistent auth"
-version: "2.7.0"
+version: "2.7.0-rex.1"
 slug: "claude_terminal"
 init: false
 
-# Prebuilt images on GHCR — the Supervisor pulls these instead of building
-# locally (no build OOM, no image blobs in backups). Tag = version below.
-image: "ghcr.io/heytcass/{arch}-addon-claude-terminal"
+# ponytail: fork builds locally (no image:), upstream's GHCR image has no Rex.
+# Publish to your own GHCR if local builds get slow.
 
 # Supported architectures (armv7 dropped in 2.5.0: HAOS dropped 32-bit ARM,
 # and neither Claude Code native builds nor managed Python exist for it)
@@ -47,6 +46,8 @@ options:
   ha_mcp_version: "7.11.0"
   persistent_apk_packages: []
   persistent_pip_packages: []
+  enable_rex: false
+  rex_tailscale_auth_key: ""
 schema:
   auto_launch_claude: bool?
   claude_auto_update: bool?
@@ -62,6 +63,8 @@ schema:
     - str
   persistent_pip_packages:
     - str
+  enable_rex: bool?
+  rex_tailscale_auth_key: password?
 
 # Left out of HA backups: everything here is rebuilt or downloaded again.
 # Supervisor tests each pattern with PurePath.match against the file's full

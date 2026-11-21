@@ -1,0 +1,71 @@
+name: Sync upstream
+
+# Opens a PR into `rex` whenever heytcass/home-assistant-addons releases a new
+# version (a `version:` bump in claude-terminal/config.yaml). Merging the PR
+# ships it: the add-on store sees `<upstream>-rex.1`.
+# Needs: Settings → Actions → General → "Allow GitHub Actions to create and
+# approve pull requests", and `rex` as the default branch (cron runs only there).
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: rex
+          fetch-depth: 0
+
+      - name: Open PR for new upstream release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          f=claude-terminal/config.yaml
+          ver() { sed -n 's/^version: *"\{0,1\}\([^"]*\)"\{0,1\}$/\1/p'; }
+
+          git fetch -q https://github.com/heytcass/home-assistant-addons.git main
+          up=$(git show FETCH_HEAD:$f | ver)
+          ours=$(ver < $f)
+          if [ "${ours%-rex.*}" = "$up" ]; then echo "Up to date ($ours)"; exit 0; fi
+
+          branch=sync/upstream-$up
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null; then
+            echo "$branch already exists (PR open?)"; exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -q -c "$branch"
+
+          # Our version line always conflicts with upstream's bump. Put it back
+          # to the value at the last merged upstream commit so only real
+          # conflicts remain, merge, then set the new version.
+          old=$(git show "$(git merge-base HEAD FETCH_HEAD)":$f | ver)
+          sed -i "s/^version: .*/version: \"$old\"/" $f
+          git commit -qam "Reset version before upstream merge"
+
+          if git merge -q --no-edit FETCH_HEAD; then
+            sed -i "s/^version: .*/version: \"$up-rex.1\"/" $f
+            git commit -qam "Bump version to $up-rex.1"
+            git push -q origin "$branch"
+            note="Merges cleanly. Merging this ships \`$up-rex.1\` to the add-on store."
+          else
+            # ponytail: on conflict, PR upstream as-is and resolve in GitHub's
+            # editor; remember to set version to "$up-rex.1" while there.
+            git merge --abort
+            git push -q origin "FETCH_HEAD:refs/heads/$branch"
+            note="**Conflicts with the Rex patch.** Resolve them here, and set \`version: \"$up-rex.1\"\` in \`$f\`."
+          fi
+
+          gh pr create --base rex --head "$branch" \
+            --title "Sync upstream $up" \
+            --body "Upstream released [$up](https://github.com/heytcass/home-assistant-addons/releases/tag/v$up). $note"

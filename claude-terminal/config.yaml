@@ -1,7 +1,7 @@
 ---
-name: "Claude Terminal"
+name: "Claude Terminal (Rex)"
 description: "Web terminal with Anthropic's Claude Code CLI and persistent auth"
-version: "2.7.0-rex.2"
+version: "2.7.0-rex.3"
 slug: "claude_terminal"
 init: false
 
@@ -21,7 +21,7 @@ url: "https://github.com/heytcass/home-assistant-addons"
 ingress: true
 ingress_port: 7681
 panel_icon: mdi:code-braces
-panel_title: "Claude Terminal"
+panel_title: "Claude Terminal (Rex)"
 panel_admin: true
 
 # Port configuration. Unset by default: ingress reaches the terminal through

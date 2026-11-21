@@ -629,14 +629,14 @@ start_rex() {
 
     local key
     key=$(bashio::config 'rex_tailscale_auth_key' '')
-    bashio::log.info "Starting Rex server on Tailscale (https://rex.<tailnet>.ts.net)"
+    bashio::log.info "Starting Rex server on Tailscale (https://rex-ha.<tailnet>.ts.net)"
     # ponytail: auth key only matters on first join; without one, look for the
     # Tailscale login URL with `rex server logs` in the terminal.
     if [ -n "$key" ]; then
-        printf '%s' "$key" | rex server start --tailscale --tailscale-auth-key-file - \
+        printf '%s' "$key" | rex server start --tailscale --tailscale-hostname rex-ha --tailscale-auth-key-file - \
             || bashio::log.warning "Rex server failed to start"
     else
-        rex server start --tailscale || bashio::log.warning "Rex server failed to start"
+        rex server start --tailscale --tailscale-hostname rex-ha || bashio::log.warning "Rex server failed to start"
     fi &
 }
 

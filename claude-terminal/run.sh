@@ -638,7 +638,13 @@ start_rex() {
         args+=(--tailscale-auth-key-file "$key_file")
     fi
 
-    bashio::log.info "Starting Rex server on Tailscale (https://rex-ha.<tailnet>.ts.net)"
+    # e.g. --tailscale-allow-tailnet-members when clients are tagged devices
+    local extra
+    extra=$(bashio::config 'rex_extra_args' '')
+    # shellcheck disable=SC2206  # word-split flags on purpose
+    [ -n "$extra" ] && args+=($extra)
+
+    bashio::log.info "Starting Rex server on Tailscale (https://rex-ha.<tailnet>.ts.net): rex server start ${args[*]}"
     # rex server start detaches on its own
     rex server start "${args[@]}" || bashio::log.warning "Rex server failed to start"
 }

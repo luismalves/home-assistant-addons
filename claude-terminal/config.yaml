@@ -1,7 +1,7 @@
 ---
 name: "Claude Terminal (Rex)"
 description: "Web terminal with Anthropic's Claude Code CLI and persistent auth"
-version: "2.7.0-rex.3"
+version: "2.7.0-rex.4"
 slug: "claude_terminal"
 init: false
 
@@ -48,6 +48,7 @@ options:
   persistent_pip_packages: []
   enable_rex: false
   rex_tailscale_auth_key: ""
+  rex_extra_args: ""
 schema:
   auto_launch_claude: bool?
   claude_auto_update: bool?
@@ -65,6 +66,7 @@ schema:
     - str
   enable_rex: bool?
   rex_tailscale_auth_key: password?
+  rex_extra_args: str?
 
 # Left out of HA backups: everything here is rebuilt or downloaded again.
 # Supervisor tests each pattern with PurePath.match against the file's full

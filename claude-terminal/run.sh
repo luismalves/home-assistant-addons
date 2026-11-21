@@ -644,6 +644,13 @@ start_rex() {
     # shellcheck disable=SC2206  # word-split flags on purpose
     [ -n "$extra" ] && args+=($extra)
 
+    # Rex shells start in $HOME (/data/home); send them to the working dir
+    # (/config by default). Only when still in $HOME, so a tab opened in a
+    # specific directory keeps it. Rex sessions use TERM=xterm-rex.
+    local rex_cd="[ \"\$TERM\" = xterm-rex ] && [ \"\$PWD\" = \"\$HOME\" ] && cd \"$(get_working_directory)\" # claude-terminal: rex workdir"
+    sed -i '/# claude-terminal: rex workdir$/d' "$HOME/.profile" 2>/dev/null
+    echo "$rex_cd" >> "$HOME/.profile"
+
     bashio::log.info "Starting Rex server on Tailscale (https://rex-ha.<tailnet>.ts.net): rex server start ${args[*]}"
     # rex server start detaches on its own
     rex server start "${args[@]}" || bashio::log.warning "Rex server failed to start"

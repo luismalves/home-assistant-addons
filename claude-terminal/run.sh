@@ -648,7 +648,8 @@ start_rex() {
     # (/config by default). Only when still in $HOME, so a tab opened in a
     # specific directory keeps it. Rex sessions use TERM=xterm-rex.
     local rex_cd="[ \"\$TERM\" = xterm-rex ] && [ \"\$PWD\" = \"\$HOME\" ] && cd \"$(get_working_directory)\" # claude-terminal: rex workdir"
-    sed -i '/# claude-terminal: rex workdir$/d' "$HOME/.profile" 2>/dev/null
+    touch "$HOME/.profile"  # sed fails on a missing file, which set -e turns fatal
+    sed -i '/# claude-terminal: rex workdir$/d' "$HOME/.profile"
     echo "$rex_cd" >> "$HOME/.profile"
 
     bashio::log.info "Starting Rex server on Tailscale (https://rex-ha.<tailnet>.ts.net): rex server start ${args[*]}"
@@ -670,7 +671,8 @@ main() {
     generate_ha_context
     start_login_url_watcher
     setup_ha_mcp
-    start_rex
+    # Optional extra: a Rex failure must never take the web terminal down
+    start_rex || bashio::log.warning "Rex setup failed; continuing without Rex"
     start_ingress_proxy
     start_web_terminal
 }

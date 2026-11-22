@@ -644,13 +644,26 @@ start_rex() {
     # shellcheck disable=SC2206  # word-split flags on purpose
     [ -n "$extra" ] && args+=($extra)
 
-    # Rex shells start in $HOME (/data/home); send them to the working dir
-    # (/config by default). Only when still in $HOME, so a tab opened in a
-    # specific directory keeps it. Rex sessions use TERM=xterm-rex.
-    local rex_cd="[ \"\$TERM\" = xterm-rex ] && [ \"\$PWD\" = \"\$HOME\" ] && cd \"$(get_working_directory)\" # claude-terminal: rex workdir"
+    # Rex starts tabs as fresh login shells, so they miss this script's
+    # environment (SUPERVISOR_TOKEN, which ha-mcp needs and Supervisor
+    # rotates on every add-on start; XDG_*; PATH...). Snapshot it to tmpfs on
+    # each start and have Rex shells (TERM=xterm-rex) source it from
+    # ~/.profile, then cd to the working dir unless the tab chose its own.
+    local env_file=/run/claude-terminal/rex-env.sh name
+    mkdir -p "$(dirname "$env_file")"
+    install -m 600 /dev/null "$env_file"  # holds the token: root-only before writing
+    (
+        for name in $(compgen -e); do
+            case "$name" in PWD|OLDPWD|SHLVL|TERM|_) continue ;; esac
+            printf "export %s='%s'\n" "$name" "$(printf '%s' "${!name}" | sed "s/'/'\\\\''/g")"
+        done
+        echo "[ \"\$PWD\" = \"\$HOME\" ] && cd \"$(get_working_directory)\""
+    ) > "$env_file"
+
+    local hook="[ \"\$TERM\" = xterm-rex ] && [ -r $env_file ] && . $env_file # claude-terminal: rex env"
     touch "$HOME/.profile"  # sed fails on a missing file, which set -e turns fatal
-    sed -i '/# claude-terminal: rex workdir$/d' "$HOME/.profile"
-    echo "$rex_cd" >> "$HOME/.profile"
+    sed -i -e '/# claude-terminal: rex env$/d' -e '/# claude-terminal: rex workdir$/d' "$HOME/.profile"
+    echo "$hook" >> "$HOME/.profile"
 
     bashio::log.info "Starting Rex server on Tailscale (https://rex-ha.<tailnet>.ts.net): rex server start ${args[*]}"
     # rex server start detaches on its own
